@@ -1,5 +1,16 @@
 # GPTEdge
 
+         _______  _______ _________ _______  ______   _______  _______ 
+        (  ____ \(  ____ )\__   __/(  ____ \(  __  \ (  ____ \(  ____ \
+        | (    \/| (    )|   ) (   | (    \/| (  \  )| (    \/| (    \/
+        | |      | (____)|   | |   | (__    | |   ) || |      | (__    
+        | | ____ |  _____)   | |   |  __)   | |   | || | ____ |  __)   
+        | | \_  )| (         | |   | (      | |   ) || | \_  )| (      
+        | (___) || )         | |   | (____/\| (__/  )| (___) || (____/\
+        (_______)|/          )_(   (_______/(______/ (_______)(_______/
+                                                                       
+
+
 GPTEdge 是一个基于 ChatGPT API 开发的人工智能助手程序，它可以用于语言处理和自然语言生成任务，包括文本分类、机器翻译、问答系统、对话生成等等。
 
 GPTEdge 的核心是 ChatGPT，这是由 OpenAI 团队开发的一个强大的自然语言处理模型。ChatGPT 使用了深度学习技术，利用海量的文本数据进行训练，可以理解自然语言，并生成自然流畅的回答。
@@ -13,6 +24,22 @@ GPTEdge 可以用于各种不同的应用场景，包括自然语言生成、文
 > 注意， 这是 GPTEdge 的自我介绍， 也许有些夸张了， 但谁知道是不是谦虚呢！
 
 
+## GPTEdge 快速安装
+
+The following installation method will download and build the latest teamsacs version
+
+```
+go install github.com/ca17/teamsacs@latest
+
+teamsacs -install
+
+```
+
 ## ChatGPT Token 配置
 
-请设置环境变量 `CHATGPT_TOKEN` 为你的 ChatGPT Token，这是一个必须的配置项。
+请设置环境变量 `GPTEDGE_CHATGPT_TOKEN` 为你的 ChatGPT Token，这是一个必须的配置项。
+
+
+## Access web console
+
+打开浏览器并输入网址: `http://your-ip:8808`
