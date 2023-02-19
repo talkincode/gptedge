@@ -1,0 +1,20 @@
+body {
+    font-family: "Microsoft Yahei", "Hiragino Sans GB", Arial, Lucida, Verdana, SimSun, Helvetica, sans-serif !important;
+    /*font-size : 62.5%; px数值除以10，然后换上em作为单位*/
+    /*min-width:980px;*/
+    font-size: 12px !important;
+}
+
+
+.chatgpt-message {
+    padding-top: 5px;
+    padding-right:30px;
+}
+
+.chatgpt-message .webix_template {
+    padding: 20px;
+    background: #eeeeee;
+    border-radius: 5px;
+    line-height: 160%;
+    white-space: pre-line;
+}

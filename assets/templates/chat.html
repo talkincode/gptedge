@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {{template "header"}}
+</head>
+<body>
+<script>
+    function getWsUrl() {
+        let loc = window.location;
+        let uri = 'ws:';
+        if (loc.protocol === 'https:') {
+            uri = 'wss:';
+        }
+        uri += '//' + loc.host;
+        uri += loc.pathname + 'wschat';
+        return uri
+    }
+
+    webix.ready(function () {
+        let lastmsg = {reqid: "", respid: "", status: "", time: 0, data: ""}
+        let chatListId = webix.uid().toString()
+        let chatInputId = webix.uid().toString()
+
+        let getWsCli = function () {
+            let wsc = new WebSocket(getWsUrl())
+
+            wsc.onclose = function () {
+                console.log('Disconnected')
+            }
+
+            wsc.onopen = function () {
+                console.log('Connected')
+            }
+
+            wsc.onmessage = function (evt) {
+                wxui.tryCall(function () {
+                    let wsmsg = JSON.parse(evt.data)
+                    lastmsg = wsmsg
+                    $$(wsmsg.respid).append(wsmsg.data)
+                    let scPos = $$(chatListId).getScrollState();
+                    $$(chatListId).scrollTo(0, scPos.y + $$(chatListId).$height);
+                    // $$(chatListId).refresh()
+                }, function (e) {
+                    console.log(e)
+                })
+            }
+            return wsc
+        }
+
+        let wscli = getWsCli()
+
+        let onInput = function () {
+            if (lastmsg.status !== "done" && new Date().getTime() - lastmsg.time < 10000) {
+                webix.message({type: "info", text: "请稍等...", expire: 3000});
+                return
+            }
+            let input = $$(chatInputId).getValue();
+            if (input) {
+                let wsmsg = {
+                    reqid: webix.uid().toString(),
+                    respid: webix.uid().toString(),
+                    status: "new",
+                    time: new Date().getTime(),
+                    data: input,
+                }
+                let reqview = {
+                    cols: [
+                        {view: "icon", icon: "wxi-user", width: 45},
+                        {view: "chatgptmsg", id: wsmsg.reqid, template: input, autoheight: true}
+                    ]
+                }
+                let respView = {
+                    cols: [
+                        {view: "icon", icon: "wxi-eye", width: 45},
+                        {view: "chatgptmsg", id: wsmsg.respid, template: "", autoheight: true}
+                    ]
+                }
+                $$(chatListId).getBody().addView(reqview)
+                $$(chatListId).getBody().addView(respView)
+                $$(chatInputId).setValue("");
+                $$(chatInputId).focus();
+                wxui.tryCall(function () {
+                    if (wscli.readyState !== 1) {
+                        wscli = getWsCli()
+                        setTimeout(function () {
+                            wscli.send(JSON.stringify(wsmsg))
+                            lastmsg = wsmsg
+                        }, 1000)
+                    } else {
+                        wscli.send(JSON.stringify(wsmsg))
+                        lastmsg = wsmsg
+                    }
+                }, function (e) {
+                    console.log(e)
+                })
+            }
+        }
+
+        webix.ui({
+            css: "main-panel",
+            padding: 50,
+            rows: [
+                wxui.getPageToolbar({
+                    winid: "chat_toolbar",
+                    title: "AI Chat",
+                    icon: "mdi mdi-message",
+                    elements: [],
+                }),
+                {
+                    view: "scrollview",
+                    id: chatListId,
+                    scroll: "y",
+                    body: {
+                        padding: 5,
+                        rows: []
+                    }
+                },
+                {
+                    cols: [
+                        {
+                            view: "textarea", id: chatInputId, height: 160, label: "",
+                        },
+                        {
+                            view: "button", id: "chat_send", value: "发送", width: 100,
+                            hotkey: "enter",
+                            on: {
+                                onKeyPress: onInput
+                            },
+                            click: onInput
+                        }
+                    ]
+                }
+            ]
+        })
+    })
+</script>
+</body>
+</html>

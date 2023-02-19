@@ -1,0 +1,9 @@
+.idea
+__pycache__
+.vscode
+/release/
+release
+Dockerfile.local
+__debug_bin
+.DS_Store
+build
