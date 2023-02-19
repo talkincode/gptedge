@@ -100,7 +100,7 @@ func LoadConfig(cfile string) *AppConfig {
 
 	setEnvValue("GPTEDGE_SYSTEM_WORKER_DIR", &cfg.Workdir)
 	setEnvBoolValue("GPTEDGE_SYSTEM_DEBUG", &cfg.Debug)
-	setEnvValue("CHATGPT_TOKEN", &cfg.GptToken)
+	setEnvValue("GPTEDGE_CHATGPT_TOKEN", &cfg.GptToken)
 
 	// WEB
 	setEnvValue("GPTEDGE_WEB_HOST", &cfg.Host)

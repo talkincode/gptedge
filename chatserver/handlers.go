@@ -37,9 +37,13 @@ func (s *ChatServer) chatIndex(c echo.Context) error {
 
 func (s *ChatServer) chatSession(c echo.Context) error {
 	websocket.Handler(func(ws *websocket.Conn) {
-		c := gogpt.NewClient(app.GConfig().GptToken)
-		ctx := context.Background()
+		client := gogpt.NewClient(app.GConfig().GptToken)
 		defer ws.Close()
+
+		reqctx := context.Background()
+
+		var taskCancel context.CancelFunc
+
 		for {
 			// Read
 			msg := ""
@@ -60,13 +64,37 @@ func (s *ChatServer) chatSession(c echo.Context) error {
 				continue
 			}
 
-			// onStartResponse(ws, wsreq)
-
-			requestStream(c, ctx, wsreq.Data, func(rmsg string) {
-				onResponse(ws, wsreq, rmsg)
-			})
-
-			onSuccDone(ws, wsreq)
+			switch wsreq.Status {
+			case "stop":
+				if taskCancel != nil {
+					taskCancel()
+					taskCancel = nil
+					log.Info("stop session")
+					sendResponse(ws, wsreq, "cancel", "Reply terminated")
+				}
+				continue
+			case "start":
+				if taskCancel != nil {
+					sendResponse(ws, wsreq, "busy", "session is processing")
+					continue
+				}
+				go func() {
+					log.Info("start new session")
+					sessionCtx, cancel := context.WithCancel(context.Background())
+					taskCancel = cancel
+					defer func() {
+						taskCancel = nil
+					}()
+					requestStream(client, reqctx, sessionCtx, wsreq.Data, func(rmsg string) {
+						onResponse(ws, wsreq, rmsg)
+					})
+					onSuccDone(ws, wsreq)
+					log.Info("session done")
+				}()
+			default:
+				taskCancel = nil
+				sendResponse(ws, wsreq, "error", "unknown status "+wsreq.Status)
+			}
 
 		}
 	}).ServeHTTP(c.Response(), c.Request())
@@ -93,22 +121,19 @@ func onSuccDone(ws *websocket.Conn, wsreq WsMessage) {
 	}))
 }
 
-func onStartResponse(ws *websocket.Conn, wsreq WsMessage) {
-	err := websocket.Message.Send(ws, common.ToJson(&WsMessage{
-		Status: "start",
+func sendResponse(ws *websocket.Conn, wsreq WsMessage, status, msg string) {
+	_ = websocket.Message.Send(ws, common.ToJson(&WsMessage{
+		Status: status,
 		Reqid:  wsreq.Reqid,
 		Respid: wsreq.Respid,
-		Data:   "",
+		Data:   msg,
 		Time:   time.Now().UnixMilli(),
 	}))
-	if err != nil {
-		log.Errorf("Send error: %v\n", err)
-	}
 }
 
 func onResponse(ws *websocket.Conn, wsreq WsMessage, rmsg string) {
 	err := websocket.Message.Send(ws, common.ToJson(&WsMessage{
-		Status: "write",
+		Status: "reply",
 		Reqid:  wsreq.Reqid,
 		Respid: wsreq.Respid,
 		Data:   rmsg,
@@ -119,35 +144,41 @@ func onResponse(ws *websocket.Conn, wsreq WsMessage, rmsg string) {
 	}
 }
 
-func requestStream(c *gogpt.Client, ctx context.Context, prompt string, onMsg func(msg string)) {
+func requestStream(c *gogpt.Client, reqCtx, sessionCtx context.Context, prompt string, onMsg func(msg string)) {
 	req := gogpt.CompletionRequest{
 		Model:     gogpt.GPT3TextDavinci003,
 		MaxTokens: 2000,
 		Prompt:    prompt,
 		Stream:    true,
 	}
-	stream, err := c.CreateCompletionStream(ctx, req)
+	stream, err := c.CreateCompletionStream(reqCtx, req)
 	if err != nil {
 		return
 	}
 	defer stream.Close()
 
 	for {
-		response, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			log.Error("Stream finished")
+		select {
+		case <-sessionCtx.Done():
+			log.Info("exit sub goroutine")
 			return
-		}
+		default:
+			response, err := stream.Recv()
+			if errors.Is(err, io.EOF) {
+				log.Error("Stream finished")
+				return
+			}
 
-		if err != nil {
-			log.Errorf("Stream error: %v\n", err)
-			return
-		}
+			if err != nil {
+				log.Errorf("Stream error: %v\n", err)
+				return
+			}
 
-		if len(response.Choices) > 0 {
-			msg := response.Choices[0].Text
-			// log.Infof("Stream response: %s\n", msg)
-			onMsg(msg)
+			if len(response.Choices) > 0 {
+				msg := response.Choices[0].Text
+				// log.Infof("Stream response: %s\n", msg)
+				onMsg(msg)
+			}
 		}
 	}
 }

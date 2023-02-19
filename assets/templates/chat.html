@@ -36,6 +36,10 @@
                 wxui.tryCall(function () {
                     let wsmsg = JSON.parse(evt.data)
                     lastmsg = wsmsg
+                    if (wsmsg.status === "busy" || wsmsg.status === "error" || wsmsg.status === "cancel") {
+                        webix.message({type: "error", text: wsmsg.data, expire: 3000});
+                        return
+                    }
                     $$(wsmsg.respid).append(wsmsg.data)
                     let scPos = $$(chatListId).getScrollState();
                     $$(chatListId).scrollTo(0, scPos.y + $$(chatListId).$height);
@@ -50,7 +54,7 @@
         let wscli = getWsCli()
 
         let onInput = function () {
-            if (lastmsg.status !== "done" && new Date().getTime() - lastmsg.time < 10000) {
+            if (lastmsg.status === "start" || lastmsg.status === "busy") {
                 webix.message({type: "info", text: "请稍等...", expire: 3000});
                 return
             }
@@ -59,24 +63,29 @@
                 let wsmsg = {
                     reqid: webix.uid().toString(),
                     respid: webix.uid().toString(),
-                    status: "new",
+                    status: "start",
                     time: new Date().getTime(),
                     data: input,
                 }
                 let reqview = {
+                    padding:10,
                     cols: [
-                        {view: "icon", icon: "wxi-user", width: 45},
-                        {view: "chatgptmsg", id: wsmsg.reqid, template: input, autoheight: true}
+                        {
+                            rows:[{view: "template", borderless:true, css:"chat-head", template:"<img src='/static/icons/user.png'>", width: 60},{}]
+                        },
+                        {view: "chatgptmsg",  id: wsmsg.reqid, template: input, autoheight: true}
                     ]
                 }
                 let respView = {
+                    padding:10,
                     cols: [
-                        {view: "icon", icon: "wxi-eye", width: 45},
+                        {rows:[{view: "template",borderless:true, css:"chat-head",  template:"<img src='/static/icons/robot.png'>", width: 60},{}]},
                         {view: "chatgptmsg", id: wsmsg.respid, template: "", autoheight: true}
                     ]
                 }
                 $$(chatListId).getBody().addView(reqview)
                 $$(chatListId).getBody().addView(respView)
+                $$(chatListId).getBody().addView({height:7})
                 $$(chatInputId).setValue("");
                 $$(chatInputId).focus();
                 wxui.tryCall(function () {
@@ -96,6 +105,16 @@
             }
         }
 
+        let onStop = function () {
+            wscli.send(JSON.stringify({
+                reqid: lastmsg.reqid,
+                respid: lastmsg.respid,
+                status: "stop",
+                time: new Date().getTime(),
+                data: "",
+            }))
+        }
+
         webix.ui({
             css: "main-panel",
             padding: 50,
@@ -111,7 +130,6 @@
                     id: chatListId,
                     scroll: "y",
                     body: {
-                        padding: 5,
                         rows: []
                     }
                 },
@@ -121,12 +139,21 @@
                             view: "textarea", id: chatInputId, height: 160, label: "",
                         },
                         {
-                            view: "button", id: "chat_send", value: "发送", width: 100,
-                            hotkey: "enter",
-                            on: {
-                                onKeyPress: onInput
-                            },
-                            click: onInput
+                            rows: [
+                                {
+                                    view: "button", id: "chat_send", value: "Send", width: 100,
+                                    hotkey: "enter",
+                                    on: {
+                                        onKeyPress: onInput
+                                    },
+                                    click: onInput
+                                },
+                                {
+                                    view: "button", id: "chat_stop", value: "Stop", width: 100,
+                                    hotkey: "enter",
+                                    click: onStop
+                                }
+                            ]
                         }
                     ]
                 }

@@ -7,14 +7,27 @@ body {
 
 
 .chatgpt-message {
-    padding-top: 5px;
+    /*padding-top: 5px;*/
+    margin-top: 5px;
     padding-right:30px;
 }
 
 .chatgpt-message .webix_template {
     padding: 20px;
     background: #eeeeee;
-    border-radius: 5px;
+    border-radius: 10px;
     line-height: 160%;
+    /*min-height: 60px;*/
     white-space: pre-line;
+}
+
+
+.chat-head .webix_template {
+    border-radius: 7px;
+}
+
+
+.chat-head .webix_template img {
+    width: 40px;
+    height: 40px;
 }
