@@ -7,12 +7,12 @@ import (
 	"runtime"
 	_ "time/tzdata"
 
-	"github.com/ca17/teamsacs/installer"
 	"github.com/talkincode/gptedge/app"
 	"github.com/talkincode/gptedge/assets"
 	"github.com/talkincode/gptedge/chatserver"
 	"github.com/talkincode/gptedge/common/zaplog/log"
 	"github.com/talkincode/gptedge/config"
+	"github.com/talkincode/gptedge/installer"
 	"golang.org/x/sync/errgroup"
 )
 
